@@ -61,7 +61,12 @@ GoRouter createRouter(AuthBloc authBloc) {
     routes: [
       GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginPage(),
+        redirect: (context, state) {
+          if (state.matchedLocation == '/login') {
+            return '/login/employee';
+          }
+          return null;
+        },
         routes: [
           GoRoute(
             path: 'admin',

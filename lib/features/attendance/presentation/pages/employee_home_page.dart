@@ -208,50 +208,6 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
                       subtitle: 'Review past attendance logs, GPS locations, and hours',
                       onTap: () => context.push('/employee/history'),
                     ),
-                    SizedBox(height: 12.h),
-
-                    // Information Card
-                    Container(
-                      padding: EdgeInsets.all(16.r),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primarySurface,
-                        borderRadius: BorderRadius.circular(16.r),
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.info_outline_rounded, size: 20.r, color: AppTheme.primaryBlue),
-                          SizedBox(width: 12.w),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'QR Attendance Rules',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 13.sp,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.primaryDark,
-                                  ),
-                                ),
-                                SizedBox(height: 4.h),
-                                Text(
-                                  '• Admin QR codes are active for 2 minutes.\n'
-                                  '• High-accuracy GPS is verified during scan.\n'
-                                  '• Check-out requires a fresh QR session.',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 12.sp,
-                                    color: AppTheme.textSecondary,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 );
               },

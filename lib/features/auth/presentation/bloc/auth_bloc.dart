@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
@@ -16,7 +17,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.logoutUseCase,
   }) : super(const AuthInitial()) {
     on<AppStarted>(_onAppStarted);
-    on<LoginSubmitted>(_onLoginSubmitted);
+    on<LoginSubmitted>(_onLoginSubmitted, transformer: droppable());
     on<LogoutRequested>(_onLogoutRequested);
   }
 

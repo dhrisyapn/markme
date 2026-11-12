@@ -29,6 +29,9 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
   }
 
   void _submit() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthLoading) return;
+
     if (_formKey.currentState?.validate() ?? false) {
       FocusScope.of(context).unfocus();
       context.read<AuthBloc>().add(
@@ -53,8 +56,10 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: 440.w),
               child: BlocConsumer<AuthBloc, AuthState>(
+                listenWhen: (previous, current) => current is AuthError && previous != current,
                 listener: (context, state) {
                   if (state is AuthError) {
+                    ScaffoldMessenger.of(context).clearSnackBars();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Row(
@@ -237,8 +242,8 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscurePassword
-                                          ? Icons.visibility_outlined
-                                          : Icons.visibility_off_outlined,
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
                                       color: AppTheme.textMuted,
                                       size: 20.r,
                                     ),
