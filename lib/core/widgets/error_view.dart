@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// Reusable error widget with an icon, message, and optional retry action.
 class ErrorView extends StatelessWidget {
@@ -17,29 +18,30 @@ class ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(24.0.r),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              size: 56,
+              size: 56.r,
               color: Theme.of(context).colorScheme.error,
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16.h),
             Text(
               message,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: Colors.grey[800],
+                    fontSize: 16.sp,
                   ),
               textAlign: TextAlign.center,
             ),
             if (onRetry != null) ...[
-              const SizedBox(height: 20),
+              SizedBox(height: 20.h),
               FilledButton.icon(
                 onPressed: onRetry,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Retry'),
+                icon: Icon(Icons.refresh_rounded, size: 18.r),
+                label: Text('Retry', style: TextStyle(fontSize: 14.sp)),
               ),
             ],
           ],

@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "MarkMe (Debug)",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--dart-define-from-file=.env"
+      ]
+    },
+    {
+      "name": "MarkMe (Profile)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "args": [
+        "--dart-define-from-file=.env"
+      ]
+    },
+    {
+      "name": "MarkMe (Release)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "args": [
+        "--dart-define-from-file=.env"
+      ]
+    }
+  ]
+}
+

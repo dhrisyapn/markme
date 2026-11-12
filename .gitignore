@@ -48,3 +48,8 @@ app.*.map.json
 .widget_previw/
 docs
 AGENTS.md
+
+# Environment variables
+.env
+!.env.example
+
