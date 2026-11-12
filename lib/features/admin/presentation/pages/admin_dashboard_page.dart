@@ -172,15 +172,19 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                'Employee Attendance Records',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.textPrimary,
+                              Flexible(
+                                child: Text(
+                                  'Employee Attendance Records',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.textPrimary,
+                                  ),
                                 ),
                               ),
-                              if (state is AdminRecordsLoaded)
+                              if (state is AdminRecordsLoaded) ...[
+                                SizedBox(width: 8.w),
                                 Text(
                                   '${state.records.length} shown',
                                   style: GoogleFonts.plusJakartaSans(
@@ -189,6 +193,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                     color: AppTheme.textMuted,
                                   ),
                                 ),
+                              ],
                             ],
                           ),
                           SizedBox(height: 12.h),

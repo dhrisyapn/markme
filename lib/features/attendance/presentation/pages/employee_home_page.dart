@@ -359,14 +359,18 @@ class _EmployeeHomePageState extends State<EmployeeHomePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Today\'s Attendance',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 15.sp,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
+              Flexible(
+                child: Text(
+                  'Today\'s Attendance',
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 15.sp,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
               ),
+              SizedBox(width: 8.w),
               Text(
                 DateFormatter.formatDisplayDate(DateTime.now()),
                 style: GoogleFonts.plusJakartaSans(

@@ -1,5 +1,6 @@
 export 'admin_login_page.dart';
 export 'employee_login_page.dart';
+export 'splash_page.dart';
 
 import 'package:flutter/material.dart';
 import 'employee_login_page.dart';
