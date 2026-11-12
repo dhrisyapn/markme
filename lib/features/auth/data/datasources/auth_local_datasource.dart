@@ -82,6 +82,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   @override
   Future<void> clearSession() async {
     await tokenStorage.clearTokens();
+    await rawStorage.delete(key: AppConstants.keyUserProfile);
     await appDatabase.clearAll();
   }
 }

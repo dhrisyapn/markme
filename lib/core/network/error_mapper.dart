@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../error/exceptions.dart';
 import '../error/failures.dart';
 
 /// Centralized mapper that converts DioExceptions, HTTP statuses, and Supabase RPC codes
@@ -9,6 +10,18 @@ class ErrorMapper {
   static Failure map(Object error) {
     if (error is Failure) {
       return error;
+    }
+
+    if (error is QrInvalidException) {
+      return QrInvalidFailure(error.message);
+    }
+
+    if (error is LocationException) {
+      return LocationFailure(error.message);
+    }
+
+    if (error is CacheException) {
+      return CacheFailure(error.message);
     }
 
     if (error is! DioException) {

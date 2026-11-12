@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/shimmer_loading.dart';
 import '../bloc/qr_session/qr_session_bloc.dart';
 import '../bloc/qr_session/qr_session_event.dart';
 import '../bloc/qr_session/qr_session_state.dart';
@@ -435,44 +436,7 @@ class _QrSessionPageState extends State<QrSessionPage> {
   }
 
   Widget _buildGeneratingCard() {
-    return Container(
-      padding: EdgeInsets.all(40.r),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceWhite,
-        borderRadius: BorderRadius.circular(24.r),
-        border: Border.all(color: AppTheme.borderLight),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 44.r,
-            height: 44.r,
-            child: const CircularProgressIndicator(
-              strokeWidth: 3.5,
-              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
-            ),
-          ),
-          SizedBox(height: 20.h),
-          Text(
-            'Creating Secure QR Session...',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textPrimary,
-            ),
-          ),
-          SizedBox(height: 6.h),
-          Text(
-            'Contacting server to register session token',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13.sp,
-              color: AppTheme.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
+    return const QrSessionGeneratingShimmer();
   }
 
   Widget _buildErrorCard(String message) {

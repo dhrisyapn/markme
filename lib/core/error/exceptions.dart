@@ -31,3 +31,12 @@ class CacheException extends AppException {
 class LocationException extends AppException {
   const LocationException(super.message);
 }
+
+class QrInvalidException extends AppException {
+  const QrInvalidException([super.message = 'Invalid QR code format']);
+}
+
+class QrExpiredException extends AppException {
+  const QrExpiredException([super.message = 'QR session has expired']);
+}
+

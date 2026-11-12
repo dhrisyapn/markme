@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/admin/presentation/pages/admin_dashboard_page.dart';
 import '../../features/admin/presentation/pages/qr_session_page.dart';
+import '../../features/attendance/presentation/pages/attendance_history_page.dart';
 import '../../features/attendance/presentation/pages/employee_home_page.dart';
+import '../../features/attendance/presentation/pages/scan_qr_page.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_state.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -29,7 +31,7 @@ GoRouter createRouter(AuthBloc authBloc) {
     refreshListenable: GoRouterRefreshStream(authBloc.stream),
     redirect: (BuildContext context, GoRouterState state) {
       final authState = authBloc.state;
-      final isLoggingIn = state.matchedLocation == '/login';
+      final isLoggingIn = state.matchedLocation.startsWith('/login');
 
       if (authState is AuthInitial || (authState is AuthLoading && authState.message?.contains('Checking') == true)) {
         return null;
@@ -45,7 +47,7 @@ GoRouter createRouter(AuthBloc authBloc) {
           return profile.isAdmin ? '/admin/dashboard' : '/employee/home';
         }
 
-        // Role-based protection
+        // Role-based route protection
         if (!profile.isAdmin && state.matchedLocation.startsWith('/admin')) {
           return '/employee/home';
         }
@@ -60,6 +62,16 @@ GoRouter createRouter(AuthBloc authBloc) {
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginPage(),
+        routes: [
+          GoRoute(
+            path: 'admin',
+            builder: (context, state) => const AdminLoginPage(),
+          ),
+          GoRoute(
+            path: 'employee',
+            builder: (context, state) => const EmployeeLoginPage(),
+          ),
+        ],
       ),
       GoRoute(
         path: '/admin/dashboard',
@@ -76,7 +88,14 @@ GoRouter createRouter(AuthBloc authBloc) {
         path: '/employee/home',
         builder: (context, state) => const EmployeeHomePage(),
       ),
+      GoRoute(
+        path: '/employee/scan',
+        builder: (context, state) => const ScanQrPage(),
+      ),
+      GoRoute(
+        path: '/employee/history',
+        builder: (context, state) => const AttendanceHistoryPage(),
+      ),
     ],
   );
 }
-

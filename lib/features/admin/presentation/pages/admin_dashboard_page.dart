@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/widgets/shimmer_loading.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
@@ -162,7 +163,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                           _buildQrActionHeroCard(),
                           SizedBox(height: 16.h),
                           if (state is AdminRecordsLoaded)
-                            _buildMetricsRow(state),
+                            _buildMetricsRow(state)
+                          else if (state is AdminRecordsLoading)
+                            const AdminMetricsRowShimmer(),
                           SizedBox(height: 20.h),
                           _buildFilterAndSearchSection(state),
                           SizedBox(height: 16.h),
@@ -196,12 +199,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
                   // Records Content List
                   if (state is AdminRecordsLoading)
-                    const SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: AppTheme.primaryBlue,
-                        ),
+                    SliverPadding(
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
+                      sliver: const SliverToBoxAdapter(
+                        child: AdminRecordsListShimmer(itemCount: 4),
                       ),
                     )
                   else if (state is AdminRecordsError)
@@ -261,19 +262,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                             (context, index) {
                               if (index == state.records.length) {
                                 return state.isFetchingNextPage
-                                    ? Padding(
-                                        padding: EdgeInsets.symmetric(
-                                          vertical: 24.h,
-                                        ),
-                                        child: Center(
-                                          child: SizedBox(
-                                            width: 24.r,
-                                            height: 24.r,
-                                            child:
-                                                const CircularProgressIndicator(
-                                                  strokeWidth: 2.5,
-                                                ),
-                                          ),
+                                    ? AppShimmer(
+                                        child: Padding(
+                                          padding: EdgeInsets.only(bottom: 24.h),
+                                          child: const AdminRecordCardShimmer(),
                                         ),
                                       )
                                     : SizedBox(height: 40.h);
@@ -513,13 +505,22 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     required Color bgColor,
   }) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
       decoration: BoxDecoration(
         color: AppTheme.surfaceWhite,
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: AppTheme.borderLight),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: Offset(0, 2.h),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
             padding: EdgeInsets.all(8.r),
@@ -529,32 +530,23 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             ),
             child: Icon(icon, color: color, size: 20.r),
           ),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  value,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  label,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.textSecondary,
-                    height: 1.25,
-                  ),
-                  softWrap: true,
-                ),
-              ],
+          SizedBox(height: 12.h),
+          Text(
+            value,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 22.sp,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.textSecondary,
+              height: 1.25,
             ),
           ),
         ],
@@ -750,6 +742,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   children: [
                     Text(
                       record.employeeName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w700,
@@ -757,35 +751,34 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       ),
                     ),
                     SizedBox(height: 2.h),
-                    Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 6.w,
-                            vertical: 1.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(4.r),
-                          ),
-                          child: Text(
-                            record.employeeCode,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
+                    Text(
+                      DateFormatter.formatDisplayDate(record.workDate),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11.sp,
+                        color: AppTheme.textMuted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 6.w,
+                        vertical: 1.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                      child: Text(
+                        record.employeeCode,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textSecondary,
                         ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          DateFormatter.formatDisplayDate(record.workDate),
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11.sp,
-                            color: AppTheme.textMuted,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ],
                 ),

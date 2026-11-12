@@ -6,6 +6,8 @@ import 'core/routes/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/admin/presentation/bloc/admin_records/admin_records_bloc.dart';
 import 'features/admin/presentation/bloc/qr_session/qr_session_bloc.dart';
+import 'features/attendance/presentation/bloc/attendance/attendance_bloc.dart';
+import 'features/attendance/presentation/bloc/history/history_bloc.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/bloc/auth_event.dart';
 
@@ -35,6 +37,8 @@ class _AppState extends State<App> {
         BlocProvider<AuthBloc>.value(value: _authBloc),
         BlocProvider<QrSessionBloc>(create: (_) => sl<QrSessionBloc>()),
         BlocProvider<AdminRecordsBloc>(create: (_) => sl<AdminRecordsBloc>()),
+        BlocProvider<AttendanceBloc>(create: (_) => sl<AttendanceBloc>()),
+        BlocProvider<HistoryBloc>(create: (_) => sl<HistoryBloc>()),
       ],
       child: ScreenUtilInit(
         designSize: const Size(375, 812),

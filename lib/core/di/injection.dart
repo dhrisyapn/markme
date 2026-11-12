@@ -7,6 +7,15 @@ import '../../features/admin/domain/usecases/create_qr_session_usecase.dart';
 import '../../features/admin/domain/usecases/get_all_attendance_records_usecase.dart';
 import '../../features/admin/presentation/bloc/admin_records/admin_records_bloc.dart';
 import '../../features/admin/presentation/bloc/qr_session/qr_session_bloc.dart';
+import '../../features/attendance/data/datasources/attendance_local_datasource.dart';
+import '../../features/attendance/data/datasources/attendance_remote_datasource.dart';
+import '../../features/attendance/data/repositories/attendance_repository_impl.dart';
+import '../../features/attendance/domain/repositories/attendance_repository.dart';
+import '../../features/attendance/domain/usecases/get_attendance_history_usecase.dart';
+import '../../features/attendance/domain/usecases/get_today_status_usecase.dart';
+import '../../features/attendance/domain/usecases/mark_attendance_usecase.dart';
+import '../../features/attendance/presentation/bloc/attendance/attendance_bloc.dart';
+import '../../features/attendance/presentation/bloc/history/history_bloc.dart';
 import '../../features/auth/data/datasources/auth_local_datasource.dart';
 import '../../features/auth/data/datasources/auth_remote_datasource.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
@@ -113,6 +122,47 @@ Future<void> configureDependencies() async {
   sl.registerFactory<AdminRecordsBloc>(
     () => AdminRecordsBloc(
       getAllRecordsUseCase: sl<GetAllAttendanceRecordsUseCase>(),
+    ),
+  );
+
+  // 6. Feature: Attendance (Employee)
+  // Data Sources
+  sl.registerLazySingleton<AttendanceRemoteDataSource>(
+    () => AttendanceRemoteDataSourceImpl(sl<DioClient>()),
+  );
+  sl.registerLazySingleton<AttendanceLocalDataSource>(
+    () => AttendanceLocalDataSourceImpl(sl<AppDatabase>()),
+  );
+
+  // Repository
+  sl.registerLazySingleton<AttendanceRepository>(
+    () => AttendanceRepositoryImpl(
+      remoteDataSource: sl<AttendanceRemoteDataSource>(),
+      localDataSource: sl<AttendanceLocalDataSource>(),
+    ),
+  );
+
+  // Use Cases
+  sl.registerLazySingleton<GetTodayStatusUseCase>(
+    () => GetTodayStatusUseCase(sl<AttendanceRepository>()),
+  );
+  sl.registerLazySingleton<MarkAttendanceUseCase>(
+    () => MarkAttendanceUseCase(sl<AttendanceRepository>()),
+  );
+  sl.registerLazySingleton<GetAttendanceHistoryUseCase>(
+    () => GetAttendanceHistoryUseCase(sl<AttendanceRepository>()),
+  );
+
+  // BLoCs
+  sl.registerFactory<AttendanceBloc>(
+    () => AttendanceBloc(
+      getTodayStatusUseCase: sl<GetTodayStatusUseCase>(),
+      markAttendanceUseCase: sl<MarkAttendanceUseCase>(),
+    ),
+  );
+  sl.registerFactory<HistoryBloc>(
+    () => HistoryBloc(
+      getAttendanceHistoryUseCase: sl<GetAttendanceHistoryUseCase>(),
     ),
   );
 }
