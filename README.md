@@ -86,3 +86,4 @@ dart analyze
 # Run unit and widget test suite
 flutter test
 ```
+flutter build apk --split-per-abi --release --dart-define-from-file=.env --obfuscate --split-debug-info=./debug-symbols/android

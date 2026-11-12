@@ -57,6 +57,7 @@ dependencies:
   google_fonts: ^6.2.1
   flutter_screenutil: ^5.9.3
   shimmer: ^4.0.0
+  rename_app: ^1.6.6
 
 dev_dependencies:
   flutter_test:

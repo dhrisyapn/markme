@@ -27,11 +27,17 @@ class GoRouterRefreshStream extends ChangeNotifier {
 
 GoRouter createRouter(AuthBloc authBloc) {
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/splash',
     refreshListenable: GoRouterRefreshStream(authBloc.stream),
     redirect: (BuildContext context, GoRouterState state) {
       final authState = authBloc.state;
       final isLoggingIn = state.matchedLocation.startsWith('/login');
+      final isSplash = state.matchedLocation == '/splash';
+
+      // Allow SplashPage to display and manage initial verification navigation
+      if (isSplash) {
+        return null;
+      }
 
       if (authState is AuthInitial || (authState is AuthLoading && authState.message?.contains('Checking') == true)) {
         return null;
@@ -60,23 +66,20 @@ GoRouter createRouter(AuthBloc authBloc) {
     },
     routes: [
       GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashPage(),
+      ),
+      GoRoute(
         path: '/login',
-        redirect: (context, state) {
-          if (state.matchedLocation == '/login') {
-            return '/login/employee';
-          }
-          return null;
-        },
-        routes: [
-          GoRoute(
-            path: 'admin',
-            builder: (context, state) => const AdminLoginPage(),
-          ),
-          GoRoute(
-            path: 'employee',
-            builder: (context, state) => const EmployeeLoginPage(),
-          ),
-        ],
+        redirect: (context, state) => '/login/employee',
+      ),
+      GoRoute(
+        path: '/login/employee',
+        builder: (context, state) => const EmployeeLoginPage(),
+      ),
+      GoRoute(
+        path: '/login/admin',
+        builder: (context, state) => const AdminLoginPage(),
       ),
       GoRoute(
         path: '/admin/dashboard',

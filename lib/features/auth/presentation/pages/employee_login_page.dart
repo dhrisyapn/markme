@@ -20,6 +20,50 @@ class _EmployeeLoginPageState extends State<EmployeeLoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _credentialsError = false;
+  bool _passwordHasError = false;
+  String? _emailErrorText;
+
+  bool get _hasErrorState =>
+      _credentialsError || _passwordHasError || _emailErrorText != null;
+
+  bool _isValidEmail(String email) {
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    return emailRegex.hasMatch(email.trim());
+  }
+
+  void _onEmailChanged(String val) {
+    setState(() {
+      _credentialsError = false;
+      _passwordHasError = false;
+
+      if (val.trim().isEmpty) {
+        _emailErrorText = 'Please enter your email';
+      } else if (!_isValidEmail(val)) {
+        _emailErrorText = 'Please enter a valid email address';
+      } else {
+        _emailErrorText = null;
+      }
+    });
+  }
+
+  void _onPasswordChanged(String val) {
+    if (_hasErrorState) {
+      setState(() {
+        _credentialsError = false;
+        _passwordHasError = false;
+
+        final email = _emailController.text.trim();
+        if (email.isEmpty) {
+          _emailErrorText = 'Please enter your email';
+        } else if (!_isValidEmail(email)) {
+          _emailErrorText = 'Please enter a valid email address';
+        } else {
+          _emailErrorText = null;
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -32,15 +76,46 @@ class _EmployeeLoginPageState extends State<EmployeeLoginPage> {
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthLoading) return;
 
-    if (_formKey.currentState?.validate() ?? false) {
-      FocusScope.of(context).unfocus();
-      context.read<AuthBloc>().add(
-            LoginSubmitted(
-              email: _emailController.text.trim(),
-              password: _passwordController.text,
-            ),
-          );
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    bool hasError = false;
+
+    if (email.isEmpty) {
+      _emailErrorText = 'Please enter your email';
+      hasError = true;
+    } else if (!_isValidEmail(email)) {
+      _emailErrorText = 'Please enter a valid email address';
+      hasError = true;
+    } else {
+      _emailErrorText = null;
     }
+
+    if (password.isEmpty) {
+      _passwordHasError = true;
+      hasError = true;
+    } else {
+      _passwordHasError = false;
+    }
+
+    if (hasError) {
+      setState(() {
+        _credentialsError = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _credentialsError = false;
+    });
+
+    FocusScope.of(context).unfocus();
+    context.read<AuthBloc>().add(
+          LoginSubmitted(
+            email: email,
+            password: password,
+          ),
+        );
   }
 
   @override
@@ -59,6 +134,11 @@ class _EmployeeLoginPageState extends State<EmployeeLoginPage> {
                 listenWhen: (previous, current) => current is AuthError && previous != current,
                 listener: (context, state) {
                   if (state is AuthError) {
+                    setState(() {
+                      _credentialsError = true;
+                      _emailErrorText = null;
+                      _passwordHasError = false;
+                    });
                     ScaffoldMessenger.of(context).clearSnackBars();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -196,6 +276,7 @@ class _EmployeeLoginPageState extends State<EmployeeLoginPage> {
                                 keyboardType: TextInputType.emailAddress,
                                 textInputAction: TextInputAction.next,
                                 enabled: !isLoading,
+                                onChanged: _onEmailChanged,
                                 decoration: InputDecoration(
                                   hintText: 'user1@mail.com',
                                   prefixIcon: Icon(
@@ -203,16 +284,26 @@ class _EmployeeLoginPageState extends State<EmployeeLoginPage> {
                                     color: AppTheme.textMuted,
                                     size: 20.r,
                                   ),
+                                  errorText: _emailErrorText,
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide: BorderSide(
+                                      color: (_credentialsError || _emailErrorText != null)
+                                          ? AppTheme.statusError
+                                          : AppTheme.borderLight,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide: BorderSide(
+                                      color: (_credentialsError || _emailErrorText != null)
+                                          ? AppTheme.statusError
+                                          : AppTheme.primaryLight,
+                                      width: 2,
+                                    ),
+                                  ),
                                 ),
-                                validator: (val) {
-                                  if (val == null || val.trim().isEmpty) {
-                                    return 'Please enter your email';
-                                  }
-                                  if (!val.contains('@') || !val.contains('.')) {
-                                    return 'Please enter a valid email address';
-                                  }
-                                  return null;
-                                },
                               ),
                               SizedBox(height: 18.h),
 
@@ -231,6 +322,7 @@ class _EmployeeLoginPageState extends State<EmployeeLoginPage> {
                                 obscureText: _obscurePassword,
                                 textInputAction: TextInputAction.done,
                                 enabled: !isLoading,
+                                onChanged: _onPasswordChanged,
                                 onFieldSubmitted: (_) => _submit(),
                                 decoration: InputDecoration(
                                   hintText: '••••••••••••',
@@ -253,16 +345,25 @@ class _EmployeeLoginPageState extends State<EmployeeLoginPage> {
                                       });
                                     },
                                   ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide: BorderSide(
+                                      color: (_passwordHasError || _credentialsError)
+                                          ? AppTheme.statusError
+                                          : AppTheme.borderLight,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    borderSide: BorderSide(
+                                      color: (_passwordHasError || _credentialsError)
+                                          ? AppTheme.statusError
+                                          : AppTheme.primaryLight,
+                                      width: 2,
+                                    ),
+                                  ),
                                 ),
-                                validator: (val) {
-                                  if (val == null || val.isEmpty) {
-                                    return 'Please enter your password';
-                                  }
-                                  if (val.length < 6) {
-                                    return 'Password must be at least 6 characters';
-                                  }
-                                  return null;
-                                },
                               ),
                               SizedBox(height: 24.h),
 
