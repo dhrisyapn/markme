@@ -4,6 +4,13 @@ MarkMe is a high-performance cross-platform mobile attendance solution built wit
 
 ---
 
+## 📥 Screen Recording & APK Build
+
+Access the screen recording demo and download the APK build directly from Google Drive:
+- 🔗 **Google Drive Folder:** [View Screen Recording & Download APK](https://drive.google.com/drive/folders/14-vgPOCQ-W_bw_MqpYELn9y6FzX-WIGf?usp=drive_link)
+
+---
+
 ## 🔐 Credentials & Testing Accounts
 
 The application provides dedicated portals for **Admin** and **Employee** roles, with an easy portal switcher to toggle between portals.
@@ -86,4 +93,3 @@ dart analyze
 # Run unit and widget test suite
 flutter test
 ```
-flutter build apk --split-per-abi --release --dart-define-from-file=.env --obfuscate --split-debug-info=./debug-symbols/android

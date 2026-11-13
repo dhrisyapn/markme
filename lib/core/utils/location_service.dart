@@ -6,6 +6,21 @@ import '../error/exceptions.dart';
 class LocationService {
   const LocationService();
 
+  /// Checks whether device location service (GPS) is currently enabled.
+  Future<bool> isLocationServiceEnabled() async {
+    return Geolocator.isLocationServiceEnabled();
+  }
+
+  /// Opens the device system location settings.
+  Future<bool> openLocationSettings() async {
+    return Geolocator.openLocationSettings();
+  }
+
+  /// Stream of location service status changes (enabled / disabled).
+  Stream<ServiceStatus> getServiceStatusStream() {
+    return Geolocator.getServiceStatusStream();
+  }
+
   /// Requests permissions and retrieves current device GPS coordinates.
   /// Throws [LocationException] if services are disabled or permissions are denied.
   Future<Position> getCurrentLocation() async {

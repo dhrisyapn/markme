@@ -1,10 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/di/injection.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/location_service.dart';
 import '../../../../core/widgets/shimmer_loading.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
@@ -13,6 +17,7 @@ import '../../domain/entities/attendance_record.dart';
 import '../bloc/attendance/attendance_bloc.dart';
 import '../bloc/attendance/attendance_event.dart';
 import '../bloc/attendance/attendance_state.dart';
+import '../widgets/location_service_dialog.dart';
 
 class EmployeeHomePage extends StatefulWidget {
   const EmployeeHomePage({super.key});
@@ -21,13 +26,97 @@ class EmployeeHomePage extends StatefulWidget {
   State<EmployeeHomePage> createState() => _EmployeeHomePageState();
 }
 
-class _EmployeeHomePageState extends State<EmployeeHomePage> {
+class _EmployeeHomePageState extends State<EmployeeHomePage>
+    with WidgetsBindingObserver {
   String? _employeeId;
+  bool _isLocationDialogOpen = false;
+  StreamSubscription<ServiceStatus>? _locationStatusSubscription;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadTodayStatus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkLocationService();
+    });
+    _listenToLocationStatus();
+  }
+
+  @override
+  void dispose() {
+    _locationStatusSubscription?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _checkLocationService();
+    }
+  }
+
+  Future<void> _checkLocationService() async {
+    try {
+      final locationService = sl<LocationService>();
+      final isEnabled = await locationService.isLocationServiceEnabled();
+      if (!mounted) return;
+
+      if (!isEnabled) {
+        _showLocationDialog();
+      } else {
+        _dismissLocationDialog();
+      }
+    } catch (_) {
+      // Platform exception fallback
+    }
+  }
+
+  void _listenToLocationStatus() {
+    try {
+      final locationService = sl<LocationService>();
+      _locationStatusSubscription =
+          locationService.getServiceStatusStream().listen((status) {
+        if (!mounted) return;
+        if (status == ServiceStatus.enabled) {
+          _dismissLocationDialog();
+        } else if (status == ServiceStatus.disabled) {
+          _showLocationDialog();
+        }
+      });
+    } catch (_) {
+      // Ignored if service status stream unavailable
+    }
+  }
+
+  void _showLocationDialog() {
+    if (_isLocationDialogOpen || !mounted) return;
+    _isLocationDialogOpen = true;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => LocationServiceDialog(
+        onOpenSettings: () async {
+          final locationService = sl<LocationService>();
+          await locationService.openLocationSettings();
+        },
+      ),
+    ).then((_) {
+      _isLocationDialogOpen = false;
+    });
+  }
+
+  void _dismissLocationDialog() {
+    if (_isLocationDialogOpen && mounted) {
+      final nav = Navigator.of(context, rootNavigator: true);
+      if (nav.canPop()) {
+        nav.pop();
+      }
+      _isLocationDialogOpen = false;
+    }
   }
 
   void _loadTodayStatus() {
