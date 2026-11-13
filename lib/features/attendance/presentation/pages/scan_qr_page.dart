@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -31,10 +32,16 @@ class _ScanQrPageState extends State<ScanQrPage>
   bool _isProcessing = false;
   String? _lastScannedCode;
 
+  bool _isLocationEnabled = false;
+  bool _hasLocationPermission = true;
+  StreamSubscription<ServiceStatus>? _serviceStatusSubscription;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _checkLocationStatus();
+    _listenToLocationStatus();
 
     _controller = MobileScannerController(
       detectionSpeed: DetectionSpeed.normal,
@@ -57,6 +64,7 @@ class _ScanQrPageState extends State<ScanQrPage>
 
   @override
   void dispose() {
+    _serviceStatusSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _scanAnimationController.dispose();
     _controller.dispose();
@@ -70,8 +78,58 @@ class _ScanQrPageState extends State<ScanQrPage>
 
     if (state == AppLifecycleState.resumed) {
       _restartCamera();
+      _checkLocationStatus();
     } else if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
       _controller.stop();
+    }
+  }
+
+  Future<void> _checkLocationStatus() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final permission = await Geolocator.checkPermission();
+      final hasPermission = permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse;
+
+      if (mounted) {
+        setState(() {
+          _isLocationEnabled = serviceEnabled;
+          _hasLocationPermission = hasPermission;
+        });
+      }
+    } catch (_) {
+      // Platform exception fallback
+    }
+  }
+
+  void _listenToLocationStatus() {
+    try {
+      _serviceStatusSubscription =
+          Geolocator.getServiceStatusStream().listen((status) {
+        if (mounted) {
+          setState(() {
+            _isLocationEnabled = (status == ServiceStatus.enabled);
+          });
+        }
+      });
+    } catch (_) {
+      // Ignored if service status stream unavailable
+    }
+  }
+
+  Future<void> _onLocationBadgeTapped() async {
+    if (!_isLocationEnabled) {
+      // Open device system location settings
+      await Geolocator.openLocationSettings();
+    } else if (!_hasLocationPermission) {
+      // Request permission or direct user to app settings
+      final permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.deniedForever) {
+        await Geolocator.openAppSettings();
+      }
+      _checkLocationStatus();
+    } else {
+      _checkLocationStatus();
     }
   }
 
@@ -264,30 +322,8 @@ class _ScanQrPageState extends State<ScanQrPage>
                       icon: Icons.arrow_back_rounded,
                       onPressed: () => context.pop(),
                     ),
-                    // GPS status badge
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(20.r),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.gps_fixed_rounded, color: AppTheme.statusSuccess, size: 14.r),
-                          SizedBox(width: 6.w),
-                          Text(
-                            'GPS High Accuracy',
-                            style: GoogleFonts.plusJakartaSans(
-                              color: Colors.white,
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    // Live dynamic GPS status badge (tap to open location settings if disabled)
+                    _buildLocationBadge(),
                     // Torch / Flashlight Toggle
                     ValueListenableBuilder<MobileScannerState>(
                       valueListenable: _controller,
@@ -508,6 +544,83 @@ class _ScanQrPageState extends State<ScanQrPage>
                       decoration: TextDecoration.underline,
                     ),
                   ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocationBadge() {
+    final bool isOff = !_isLocationEnabled;
+    final bool isDenied = _isLocationEnabled && !_hasLocationPermission;
+
+    final Color badgeColor = isOff
+        ? AppTheme.statusError
+        : isDenied
+            ? AppTheme.statusWarning
+            : AppTheme.statusSuccess;
+
+    final Color badgeBg = isOff
+        ? AppTheme.statusError.withValues(alpha: 0.18)
+        : isDenied
+            ? AppTheme.statusWarning.withValues(alpha: 0.18)
+            : Colors.black.withValues(alpha: 0.6);
+
+    final Color borderColor = isOff
+        ? AppTheme.statusError.withValues(alpha: 0.8)
+        : isDenied
+            ? AppTheme.statusWarning.withValues(alpha: 0.8)
+            : Colors.white.withValues(alpha: 0.2);
+
+    final IconData badgeIcon = isOff
+        ? Icons.location_off_rounded
+        : isDenied
+            ? Icons.location_disabled_rounded
+            : Icons.gps_fixed_rounded;
+
+    final String badgeText = isOff
+        ? 'Location Off'
+        : isDenied
+            ? 'Location Denied'
+            : 'GPS High Accuracy';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _onLocationBadgeTapped,
+        borderRadius: BorderRadius.circular(20.r),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+          decoration: BoxDecoration(
+            color: badgeBg,
+            borderRadius: BorderRadius.circular(20.r),
+            border: Border.all(
+              color: borderColor,
+              width: (isOff || isDenied) ? 1.2 : 1.0,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(badgeIcon, color: badgeColor, size: 14.r),
+              SizedBox(width: 6.w),
+              Text(
+                badgeText,
+                style: GoogleFonts.plusJakartaSans(
+                  color: (isOff || isDenied) ? badgeColor : Colors.white,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (isOff || isDenied) ...[
+                SizedBox(width: 4.w),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: badgeColor,
+                  size: 10.r,
                 ),
               ],
             ],
