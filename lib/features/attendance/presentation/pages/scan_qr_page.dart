@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -21,7 +22,8 @@ class ScanQrPage extends StatefulWidget {
   State<ScanQrPage> createState() => _ScanQrPageState();
 }
 
-class _ScanQrPageState extends State<ScanQrPage> with SingleTickerProviderStateMixin {
+class _ScanQrPageState extends State<ScanQrPage>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final MobileScannerController _controller;
   late final AnimationController _scanAnimationController;
   late final Animation<double> _scanAnimation;
@@ -32,6 +34,8 @@ class _ScanQrPageState extends State<ScanQrPage> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     _controller = MobileScannerController(
       detectionSpeed: DetectionSpeed.normal,
       facing: CameraFacing.back,
@@ -53,9 +57,33 @@ class _ScanQrPageState extends State<ScanQrPage> with SingleTickerProviderStateM
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scanAnimationController.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (!mounted) return;
+
+    if (state == AppLifecycleState.resumed) {
+      _restartCamera();
+    } else if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+      _controller.stop();
+    }
+  }
+
+  Future<void> _restartCamera() async {
+    try {
+      await _controller.start();
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (_) {
+      // Ignored if already started or currently transitioning
+    }
   }
 
   void _onDetect(BarcodeCapture capture) {
@@ -164,51 +192,64 @@ class _ScanQrPageState extends State<ScanQrPage> with SingleTickerProviderStateM
             MobileScanner(
               controller: _controller,
               onDetect: _onDetect,
+              errorBuilder: (context, error, child) {
+                return _buildScannerErrorView(error);
+              },
             ),
 
-            // Semi-transparent overlay with cutout
-            CustomPaint(
-              size: Size.infinite,
-              painter: _ScannerOverlayPainter(
-                boxSize: 260.r,
-                borderRadius: 20.r,
-              ),
-            ),
-
-            // Animated Laser Scanning Line inside cutout
-            Center(
-              child: SizedBox(
-                width: 260.r,
-                height: 260.r,
-                child: AnimatedBuilder(
-                  animation: _scanAnimation,
-                  builder: (context, child) {
-                    return Align(
-                      alignment: Alignment(0, (_scanAnimation.value * 2) - 1),
-                      child: Container(
-                        height: 3.h,
-                        width: 240.w,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppTheme.primaryLight.withValues(alpha: 0.1),
-                              AppTheme.primaryLight,
-                              AppTheme.primaryLight.withValues(alpha: 0.1),
-                            ],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primaryLight.withValues(alpha: 0.8),
-                              blurRadius: 8,
-                              spreadRadius: 1,
-                            ),
-                          ],
+            // Semi-transparent overlay with cutout and scanning laser (only when active without error)
+            ValueListenableBuilder<MobileScannerState>(
+              valueListenable: _controller,
+              builder: (context, state, child) {
+                if (state.error != null) {
+                  return const SizedBox.shrink();
+                }
+                return Stack(
+                  children: [
+                    CustomPaint(
+                      size: Size.infinite,
+                      painter: _ScannerOverlayPainter(
+                        boxSize: 260.r,
+                        borderRadius: 20.r,
+                      ),
+                    ),
+                    Center(
+                      child: SizedBox(
+                        width: 260.r,
+                        height: 260.r,
+                        child: AnimatedBuilder(
+                          animation: _scanAnimation,
+                          builder: (context, child) {
+                            return Align(
+                              alignment: Alignment(0, (_scanAnimation.value * 2) - 1),
+                              child: Container(
+                                height: 3.h,
+                                width: 240.w,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      AppTheme.primaryLight.withValues(alpha: 0.1),
+                                      AppTheme.primaryLight,
+                                      AppTheme.primaryLight.withValues(alpha: 0.1),
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppTheme.primaryLight.withValues(alpha: 0.8),
+                                      blurRadius: 8,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
-                    );
-                  },
-                ),
-              ),
+                    ),
+                  ],
+                );
+              },
             ),
 
             // Top Bar Controls
@@ -264,93 +305,213 @@ class _ScanQrPageState extends State<ScanQrPage> with SingleTickerProviderStateM
               ),
             ),
 
-            // Bottom Instructions and Loading Banner
-            SafeArea(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: 36.h, left: 24.w, right: 24.w),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (_isProcessing) ...[
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 14.h),
-                          decoration: BoxDecoration(
-                            color: AppTheme.surfaceWhite,
-                            borderRadius: BorderRadius.circular(16.r),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                blurRadius: 16,
-                                offset: Offset(0, 4.h),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 20.r,
-                                height: 20.r,
-                                child: const CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
-                                ),
-                              ),
-                              SizedBox(width: 14.w),
-                              Flexible(
-                                child: Text(
-                                  'Verifying GPS & QR session...',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.textPrimary,
+            // Bottom Instructions and Loading Banner (only when camera is operational without error)
+            ValueListenableBuilder<MobileScannerState>(
+              valueListenable: _controller,
+              builder: (context, state, child) {
+                if (state.error != null) {
+                  return const SizedBox.shrink();
+                }
+                return SafeArea(
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: 36.h, left: 24.w, right: 24.w),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_isProcessing) ...[
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 14.h),
+                              decoration: BoxDecoration(
+                                color: AppTheme.surfaceWhite,
+                                borderRadius: BorderRadius.circular(16.r),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 16,
+                                    offset: Offset(0, 4.h),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
-                      ] else ...[
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 14.h),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.65),
-                            borderRadius: BorderRadius.circular(16.r),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Align the MarkMe QR Code within the frame',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: Colors.white,
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 20.r,
+                                    height: 20.r,
+                                    child: const CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+                                    ),
+                                  ),
+                                  SizedBox(width: 14.w),
+                                  Flexible(
+                                    child: Text(
+                                      'Verifying GPS & QR session...',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              SizedBox(height: 4.h),
-                              Text(
-                                'Make sure you are at the authorized workplace location',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.plusJakartaSans(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                  fontSize: 12.sp,
-                                ),
+                            ),
+                          ] else ...[
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 14.h),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                borderRadius: BorderRadius.circular(16.r),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                               ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Align the MarkMe QR Code within the frame',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: Colors.white,
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4.h),
+                                  Text(
+                                    'Make sure you are at the authorized workplace location',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      color: Colors.white.withValues(alpha: 0.7),
+                                      fontSize: 12.sp,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScannerErrorView(MobileScannerException error) {
+    final bool isPermissionError =
+        error.errorCode == MobileScannerErrorCode.permissionDenied;
+
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 28.w),
+        child: Container(
+          padding: EdgeInsets.all(24.r),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(20.r),
+            border: Border.all(
+              color: isPermissionError ? AppTheme.statusWarning : AppTheme.statusError,
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.6),
+                blurRadius: 20,
+                offset: Offset(0, 4.h),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56.r,
+                height: 56.r,
+                decoration: BoxDecoration(
+                  color: isPermissionError
+                      ? AppTheme.statusWarningSurface
+                      : AppTheme.statusErrorSurface,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isPermissionError
+                      ? Icons.no_photography_rounded
+                      : Icons.error_outline_rounded,
+                  color: isPermissionError
+                      ? AppTheme.statusWarning
+                      : AppTheme.statusError,
+                  size: 28.r,
+                ),
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                isPermissionError
+                    ? 'Camera Permission Required'
+                    : 'Camera Initialization Failed',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  color: Colors.white,
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                isPermissionError
+                    ? 'MarkMe needs access to your camera to scan attendance QR codes. Please grant camera permission to continue.'
+                    : 'Unable to start camera preview. Tap the button below to retry.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 13.sp,
+                  height: 1.4,
+                ),
+              ),
+              SizedBox(height: 20.h),
+              FilledButton.icon(
+                onPressed: _restartCamera,
+                icon: Icon(Icons.refresh_rounded, size: 18.r),
+                label: Text(
+                  isPermissionError ? 'Grant Permission / Retry' : 'Retry Camera',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
                   ),
                 ),
               ),
-            ),
-          ],
+              if (isPermissionError) ...[
+                SizedBox(height: 8.h),
+                TextButton(
+                  onPressed: () => Geolocator.openAppSettings(),
+                  child: Text(
+                    'Open App Settings',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: AppTheme.primaryLight,
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
